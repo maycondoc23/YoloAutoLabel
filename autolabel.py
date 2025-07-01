@@ -12,7 +12,6 @@ class ImageToolApp:
         self.accepted_detections = []  
         self.root = root
         self.root.title("Detector de Padrões")
-        root.geometry("1000x700")
         root.state('zoomed')
 
         self.zoom = 1.0
