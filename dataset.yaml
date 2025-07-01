@@ -1,0 +1,5 @@
+train: C:/Users/mayconcosta/Pictures/huawei/images/train
+val: C:/Users/mayconcosta/Pictures/huawei/images/val
+
+nc: 9
+names: ['DATAMATRIX', 'RJ45_BOT','PARAFUSO','ANTENNA_ADAPTER','BOSA_BOT','BOSA_4P_BOT',USB_BOT,'POWERBTN_BOT', 'LED']

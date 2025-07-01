@@ -1,0 +1,301 @@
+{
+    "POWERBTN_BOT1": {
+        "classe": "POWERBTN_BOT",
+        "posicoes": [
+            [
+                4170,
+                1295
+            ]
+        ],
+        "tamanho": [
+            92,
+            154
+        ]
+    },
+    "RJ45_BOT1": {
+        "classe": "RJ45_BOT",
+        "posicoes": [
+            [
+                1935,
+                1166
+            ]
+        ],
+        "tamanho": [
+            165,
+            82
+        ]
+    },
+    "RJ45_BOT2": {
+        "classe": "RJ45_BOT",
+        "posicoes": [
+            [
+                2874,
+                1149
+            ]
+        ],
+        "tamanho": [
+            167,
+            80
+        ]
+    },
+    "RJ45_BOT3": {
+        "classe": "RJ45_BOT",
+        "posicoes": [
+            [
+                2246,
+                1161
+            ]
+        ],
+        "tamanho": [
+            166,
+            81
+        ]
+    },
+    "RJ45_BOT4": {
+        "classe": "RJ45_BOT",
+        "posicoes": [
+            [
+                2562,
+                1153
+            ]
+        ],
+        "tamanho": [
+            168,
+            81
+        ]
+    },
+    "DATAMATRIX1": {
+        "classe": "DATAMATRIX",
+        "posicoes": [
+            [
+                1532,
+                1188
+            ]
+        ],
+        "tamanho": [
+            176,
+            108
+        ]
+    },
+    "BOSA_BOT1": {
+        "classe": "BOSA_BOT",
+        "posicoes": [
+            [
+                1541,
+                2420
+            ]
+        ],
+        "tamanho": [
+            77,
+            73
+        ]
+    },
+    "LED1": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                3160,
+                2962
+            ]
+        ],
+        "tamanho": [
+            23,
+            48
+        ]
+    },
+    "LED2": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                2340,
+                2964
+            ]
+        ],
+        "tamanho": [
+            22,
+            48
+        ]
+    },
+    "LED3": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                2154,
+                2962
+            ]
+        ],
+        "tamanho": [
+            23,
+            51
+        ]
+    },
+    "LED4": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                3575,
+                2962
+            ]
+        ],
+        "tamanho": [
+            23,
+            50
+        ]
+    },
+    "LED5": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                1923,
+                2965
+            ]
+        ],
+        "tamanho": [
+            24,
+            48
+        ]
+    },
+    "LED6": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                3783,
+                2961
+            ]
+        ],
+        "tamanho": [
+            24,
+            48
+        ]
+    },
+    "LED7": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                1736,
+                2964
+            ]
+        ],
+        "tamanho": [
+            22,
+            47
+        ]
+    },
+    "LED8": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                3368,
+                2963
+            ]
+        ],
+        "tamanho": [
+            24,
+            49
+        ]
+    },
+    "LED9": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                2954,
+                2963
+            ]
+        ],
+        "tamanho": [
+            24,
+            49
+        ]
+    },
+    "LED10": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                2749,
+                2964
+            ]
+        ],
+        "tamanho": [
+            23,
+            47
+        ]
+    },
+    "LED11": {
+        "classe": "LED",
+        "posicoes": [
+            [
+                2545,
+                2962
+            ]
+        ],
+        "tamanho": [
+            23,
+            49
+        ]
+    },
+    "PARAFUSO1": {
+        "classe": "PARAFUSO",
+        "posicoes": [
+            [
+                4227,
+                2122
+            ]
+        ],
+        "tamanho": [
+            123,
+            123
+        ]
+    },
+    "PARAFUSO2": {
+        "classe": "PARAFUSO",
+        "posicoes": [
+            [
+                3403,
+                2759
+            ]
+        ],
+        "tamanho": [
+            123,
+            123
+        ]
+    },
+    "USB_BOT1": {
+        "classe": "USB_BOT",
+        "posicoes": [
+            [
+                3616,
+                1115
+            ]
+        ],
+        "tamanho": [
+            136,
+            141
+        ]
+    },
+    "ANTENNA_ADAPTER1": {
+        "classe": "ANTENNA_ADAPTER",
+        "posicoes": [
+            [
+                4162,
+                2994
+            ]
+        ],
+        "tamanho": [
+            67,
+            69
+        ]
+    },
+    "BOSA_4P_BOT1": {
+        "classe": "BOSA_4P_BOT",
+        "posicoes": [
+            [
+                1551,
+                2641
+            ]
+        ],
+        "tamanho": [
+            65,
+            62
+        ]
+    }
+}
