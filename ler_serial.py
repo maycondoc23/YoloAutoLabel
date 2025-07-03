@@ -103,7 +103,6 @@ def run_model(imagem_ref_path, imagem_inspecao_path, rois_path):
 
     
 def ler_serial(image_crop):
-    # Aumenta a resolução do crop para facilitar leitura do código
     rec_zoom = cv2.resize(image_crop, None, fx=4.0, fy=4.0, interpolation=cv2.INTER_CUBIC)
     rec_gray = cv2.cvtColor(rec_zoom, cv2.COLOR_BGR2GRAY)
     _, rec_bin = cv2.threshold(rec_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -123,9 +122,5 @@ def ler_serial(image_crop):
             
         return valor  # Retorna o primeiro valor lido com sucesso
 
-    # Caso não tenha decodificado nada
     print("Falha de leitura datamatrix")
     return ""  # ou None, dependendo do que preferir tratar fora
-# RY2560023894
-# RY2560025436
-# [)>06SRY25600254361P0302065845

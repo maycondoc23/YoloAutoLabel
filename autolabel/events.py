@@ -12,7 +12,7 @@ def on_listbox_double_click(self, event):
         print(f"[✔] Detecção {index + 1} aceita permanentemente.")
     self.draw_detections()
     self.show_image_on_canvas()
-
+    accept_detection(self, index)
 
 def on_mouse_down(self, event):
     if self.img is None:
@@ -89,8 +89,11 @@ def on_mouse_up(self, event):
     min_dist = 10  # distância mínima entre detecções similares
     added_points = []
 
+    limit = 20
+    count = 0
     for pt in zip(*loc[::-1]):
-        
+
+
         skip = False
         for added in added_points:
             if np.linalg.norm(np.array(pt) - np.array(added)) < min_dist:
@@ -98,7 +101,10 @@ def on_mouse_up(self, event):
                 break
         if skip:
             continue
-
+        count += 1
+        if count > limit:
+            print(f"[!] Limite de {limit} detecções atingido. Parando a busca.")
+            break
         # Verificar se já foi aceito algo próximo
         for tipo, data in self.accepted_detections:
             if self.mode == 'circle' and tipo == 'circle':
@@ -173,3 +179,74 @@ def on_listbox_click(self, event):
     self.selected_index = index
     self.draw_detections()
     self.show_image_on_canvas()
+
+def on_template_click(self, event):
+    self.detections = [det for det in self.detections if det in self.accepted_detections]
+
+    index = int(event.y // 60)
+    if 0 <= index < len(self.template_history):
+        template = self.template_history[index]
+        self.apply_single_template(template)
+
+def accept_detection(self, index):
+    if index >= len(self.detections):
+        return
+    detection = self.detections[index]
+    self.accepted_detections.append(detection)
+
+    tipo, data = detection
+    img_h, img_w = self.original_img.shape[:2]
+
+    if tipo == 'rect':
+        # data no formato (x1, y1, x2, y2) absoluto em pixels na imagem original (zoom=1)
+        # mas para garantir, convertemos para coordenadas YOLO primeiro
+        x1, y1, x2, y2 = map(int, data)
+
+        # converter para coordenadas YOLO (normalizadas)
+        x_center = (x1 + x2) / 2.0 / img_w
+        y_center = (y1 + y2) / 2.0 / img_h
+        width = abs(x2 - x1) / img_w
+        height = abs(y2 - y1) / img_h
+
+        # converter de volta para coordenadas absolutas na imagem original para crop exato
+        cx = int(x_center * img_w)
+        cy = int(y_center * img_h)
+        w = int(width * img_w)
+        h = int(height * img_h)
+
+        crop_x1 = max(cx - w // 2, 0)
+        crop_y1 = max(cy - h // 2, 0)
+        crop_x2 = min(cx + w // 2, img_w)
+        crop_y2 = min(cy + h // 2, img_h)
+
+        crop = self.original_img[crop_y1:crop_y2, crop_x1:crop_x2]
+
+    elif tipo == 'circle':
+        cx, cy, r = map(int, data)
+
+        # converter para YOLO
+        x_center = cx / img_w
+        y_center = cy / img_h
+        width = height = (2 * r) / img_w  # assume círculo como quadrado para crop
+
+        cx_abs = int(x_center * img_w)
+        cy_abs = int(y_center * img_h)
+        w = h = int(width * img_w)
+
+        crop_x1 = max(cx_abs - w // 2, 0)
+        crop_y1 = max(cy_abs - h // 2, 0)
+        crop_x2 = min(cx_abs + w // 2, img_w)
+        crop_y2 = min(cy_abs + h // 2, img_h)
+
+        crop = self.original_img[crop_y1:crop_y2, crop_x1:crop_x2]
+
+    else:
+        print("Tipo de detecção desconhecido.")
+        return
+
+    if crop.size > 0:
+        self.add_template_to_history(crop)
+
+    cv2.imwrite(f"debug_crop_{index}.png", crop)
+    self.update_image_with_zoom()
+    self.update_detection_list()

@@ -22,7 +22,7 @@ def aprender(model):
     model.train(data=r'dataset.yaml', epochs=100, imgsz=2200, batch=1, device='0', workers=0,amp=False)
 
 model = YOLO(r'C:\Users\mayconcosta\yolo-V8\runs\detect\train29\weights\best.pt')
-
+aprender(model)
 componentes_esperados = carregar_componentes()
 
 
