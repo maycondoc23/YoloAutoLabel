@@ -1,145 +1,152 @@
 {
+    "BOSA_BOT1": {
+        "classe": "BOSA_BOT",
+        "posicoes": [
+            [
+                4709,
+                1246
+            ]
+        ],
+        "tamanho": [
+            117,
+            105
+        ],
+        "Compare": true,
+        "area": 200
+    },
     "DATAMATRIX1": {
         "classe": "DATAMATRIX",
         "posicoes": [
             [
-                3182,
-                2477
+                4709,
+                3117
             ]
         ],
         "tamanho": [
-            154,
-            93
-        ]
+            270,
+            152
+        ],
+        "Compare": false,
+        "area": 100
     },
     "POWERBTN_BOT1": {
         "classe": "POWERBTN_BOT",
         "posicoes": [
             [
-                876,
-                2506
+                770,
+                2974
             ]
         ],
         "tamanho": [
-            84,
-            134
-        ]
+            141,
+            224
+        ],
+        "Compare": true,
+        "area": 100
     },
     "RJ45_BOT1": {
         "classe": "RJ45_BOT",
         "posicoes": [
             [
-                2827,
-                2511
+                3625,
+                3172
             ]
         ],
         "tamanho": [
-            143,
-            66
-        ]
+            249,
+            110
+        ],
+        "Compare": true,
+        "area": 800
     },
     "RJ45_BOT2": {
         "classe": "RJ45_BOT",
         "posicoes": [
             [
-                2558,
-                2532
+                3149,
+                3181
             ]
         ],
         "tamanho": [
-            143,
-            67
-        ]
+            246,
+            112
+        ],
+        "Compare": true,
+        "area": 100
     },
     "RJ45_BOT3": {
         "classe": "RJ45_BOT",
         "posicoes": [
             [
-                2286,
-                2552
+                4093,
+                3158
             ]
         ],
         "tamanho": [
-            144,
-            66
-        ]
+            253,
+            112
+        ],
+        "Compare": true,
+        "area": 300
     },
     "RJ45_BOT4": {
         "classe": "RJ45_BOT",
         "posicoes": [
             [
-                2018,
-                2572
+                2683,
+                3191
             ]
         ],
         "tamanho": [
-            146,
-            69
-        ]
-    },
-    "BOSA_BOT1": {
-        "classe": "BOSA_BOT",
-        "posicoes": [
-            [
-                3133,
-                1408
-            ]
+            243,
+            115
         ],
-        "tamanho": [
-            64,
-            62
-        ]
-    },
-    "USB_BOT1": {
-        "classe": "USB_BOT",
-        "posicoes": [
-            [
-                1376,
-                2633
-            ]
-        ],
-        "tamanho": [
-            114,
-            121
-        ]
-    },
-    "PARAFUSO1": {
-        "classe": "PARAFUSO",
-        "posicoes": [
-            [
-                1495,
-                1190
-            ]
-        ],
-        "tamanho": [
-            108,
-            106
-        ]
-    },
-    "PARAFUSO2": {
-        "classe": "PARAFUSO",
-        "posicoes": [
-            [
-                789,
-                1780
-            ]
-        ],
-        "tamanho": [
-            117,
-            109
-        ]
+        "Compare": true,
+        "area": 100
     },
     "BOSA_4P_BOT1": {
         "classe": "BOSA_4P_BOT",
         "posicoes": [
             [
-                3119,
-                1214
+                4696,
+                902
             ]
         ],
         "tamanho": [
-            54,
-            55
-        ]
+            99,
+            99
+        ],
+        "Compare": true,
+        "area": 100
+    },
+    "USB_BOT1": {
+        "classe": "USB_BOT",
+        "posicoes": [
+            [
+                1590,
+                3237
+            ]
+        ],
+        "tamanho": [
+            192,
+            200
+        ],
+        "Compare": true,
+        "area": 500
+    },
+    "PARAFUSO1": {
+        "classe": "PARAFUSO",
+        "posicoes": [
+            [
+                1874,
+                757
+            ]
+        ],
+        "tamanho": [
+            193,
+            176
+        ],
+        "Compare": false,
+        "area": 100
     }
 }

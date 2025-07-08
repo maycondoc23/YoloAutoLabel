@@ -64,14 +64,20 @@ def detectar_curto_aprimorado(img_path_boa,img_path_ruim,borda,area_min):
 
     # Visualização
     empilhada = np.hstack([img_boa, img_resultado])
-    cv2.imshow("Boa | Ruim | Curto Detectado", empilhada)
+
+    # Zoom (3x)
+    zoom_factor = 3
+    empilhada_zoom = cv2.resize(
+        empilhada, None,
+        fx=zoom_factor,
+        fy=zoom_factor,
+        interpolation=cv2.INTER_LINEAR
+    )
+
+    cv2.imshow("Boa | Curto Detectado", empilhada_zoom)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv2.destroyAllWindows() 
 
 # Exemplo de uso
-detectar_curto_aprimorado(
-    img_path_boa=r"debug\padrao.jpg",
-    img_path_ruim=r"debug\ruim.jpg",
-    borda=0.1,
-    area_min=100,
-)
+detectar_curto_aprimorado(img_path_boa=r"debug\padrao.jpg",img_path_ruim=r"debug\ruim.jpg",borda=0.1,area_min=100)
+detectar_curto_aprimorado(img_path_boa=r"debug\padrao2.jpg",img_path_ruim=r"debug\ruim2.jpg",borda=0.1,area_min=100)

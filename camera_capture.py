@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from ultralytics import YOLO
 from collections import defaultdict
 import math
@@ -8,25 +10,19 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt, QRect
 # import torch.multiprocessing
-import threading
 from ler_serial import ler_serial
 
-# torch.multiprocessing.set_start_method('spawn', force=True)
 import sys
 import os
 os.environ["GALAXY_GENICAM_ROOT"] = r"C:\\Program Files\\Daheng Imaging\\GalaxySDK\\GenICam"
 import cv2
 import gxipy as gx
 import numpy as np
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QImage, QPixmap
 from skimage.metrics import structural_similarity as ssim
 import os
 
-
-serial = "Awaiting..."
-Passed = "Awaiting..."
-lista = ['BOSA_BOT1', 'BOSA_4P_BOT1']
 
 def aprender(model):
     model.train(
@@ -58,13 +54,35 @@ imagem_saida = r'images\padrao2-saida.jpg'
 
 aprendizado = False
 imagem_atual = None
+
+class ItemFrame(QFrame):
+    def __init__(self, nome, callback_selecao, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.nome = nome
+        self.callback_selecao = callback_selecao
+
+    def mousePressEvent(self, event):
+        self.callback_selecao(self.nome, self)  # chama a função que lida com a seleção
+        super().mousePressEvent(event)
+
+        
 class Principal(QMainWindow):
     def __init__(self):
         global imagem_saida
         super().__init__()
+        self.lista = []
         self.exibir_macara = False
         self.exibir_resultado = True
         self.janelas_crops_abertas = set()
+        self.item_selecionado = None
+        self.larg_img = None
+        self.lista_passed = []
+        self.lista_test = []
+        
+        for componente, info in componentes_esperados.items():
+            if info["Compare"] == True:
+                self.lista_test.append(componente)
+
 
         self.setWindowTitle("Visualizador de Componentes")
         self.resize(1400, 800)
@@ -72,48 +90,51 @@ class Principal(QMainWindow):
         self.caminho_json = "setup_componentes.json"
 
         layout_principal = QHBoxLayout()
-        layout_imagem_botoes = QVBoxLayout()
+        self.layout_imagem_botoes = QVBoxLayout()
 
-        self.labelserial = QLabel("")
-        self.labelserial.setMinimumHeight(30)
-        self.labelserial.setMaximumHeight(30)
+        self.labelserial = QLabel("Serial: ")
+        self.labelserial.setMinimumHeight(50)
+        self.labelserial.setMaximumHeight(50)
         self.labelserial.setStyleSheet("font-size: 30px;")
 
         self.label_imagem = QLabel()
         self.label_imagem.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.label_imagem.setAlignment(Qt.AlignCenter)
 
-        layout_imagem_botoes.addWidget(self.labelserial)
-        layout_imagem_botoes.addWidget(self.label_imagem)
+        self.layout_imagem_botoes.addWidget(self.labelserial)
+        self.layout_imagem_botoes.addWidget(self.label_imagem)
 
         layout_botoes = QHBoxLayout()
 
-        btn1 = QPushButton("INSPECIONAR")
-        btn1.setMinimumHeight(80)
-        self.btn1 = btn1
-
-        btn2 = QPushButton("VOLTAR")
-        btn2.setMinimumHeight(80)
-        self.btn2 = btn2
-        self.btn2.clicked.connect(self.recarregarimagem)
+        # btn1 = QPushButton("INSPECIONAR")
+        # btn1.setMinimumHeight(80)
+        # self.btn1 = btn1
+        # self.btn1.setStyleSheet("background-color: blue; font-weight: bold; color;Black")
 
         btnmask = QPushButton("DEFINIR MASCARA PADRAO")
-        btnmask.setMinimumHeight(80)
+        btnmask.setMinimumHeight(30)
         self.btnmask = btnmask
-        self.btnmask.clicked.connect(self.definirmask)
+        self.btnmask.clicked.connect(self.definirmask)  
 
-        layout_botoes.addWidget(btn1)
-        layout_botoes.addWidget(btn2)
-        layout_botoes.addWidget(btnmask)
-        layout_imagem_botoes.addLayout(layout_botoes)
+        # layout_botoes.addWidget(btn1)
+        self.layout_imagem_botoes.addLayout(layout_botoes)
+            
+        self.layout_lista_widget = QWidget()
+        layout_lista = QVBoxLayout(self.layout_lista_widget)
 
-        layout_lista = QVBoxLayout()
+        # ➕ TÍTULO DO FRAME
+        titulo = QLabel("Setup Area")
+        titulo.setStyleSheet("font-size: 22px; font-weight: bold; color: white; padding: 5px;")
+        layout_lista.addWidget(titulo)
 
-        self.lista = QListWidget()
-        self.lista.setMaximumWidth(420)
-        self.lista.setSpacing(2)
+        self.scroll_area = QScrollArea()
 
-        layout_lista.addWidget(self.lista)
+        self.scroll_area.setWidgetResizable(True)
+        self.lista_widget = QWidget()
+        self.lista_layout = QVBoxLayout()
+        self.lista_widget.setLayout(self.lista_layout)
+        self.scroll_area.setWidget(self.lista_widget)
+        layout_lista.addWidget(self.scroll_area)
 
         mover_layout = QHBoxLayout()
         self.combo_direcao = QComboBox()
@@ -127,16 +148,30 @@ class Principal(QMainWindow):
         layout_lista.addLayout(mover_layout)
 
         btn3 = QPushButton("EXIBIR TODOS COMPONENTES")
-        btn3.setMinimumHeight(80)
+        btn3.setMinimumHeight(30)
         self.btn3 = btn3
+
         # self.btn3.clicked.connect(self.exibir_todos_componentes)
+        layout_lista.addWidget(btnmask)
         layout_lista.addWidget(btn3)
 
-        layout_principal.addLayout(layout_imagem_botoes, 70)
-        layout_principal.addLayout(layout_lista, 30)
+        # Botão para esconder/exibir Setup Area
+        self.toggle_btn = QPushButton(">")
+        self.toggle_btn.setFixedSize(30, 100)  # Largura = 30, Altura = 100
+        self.toggle_btn.setStyleSheet("background-color: blue; font-weight: bold; color;Black")
+        self.toggle_btn.clicked.connect(self.toggle_setup_area)
 
-        self.lista.itemClicked.connect(self.item_clique)
-        self.lista.itemDoubleClicked.connect(self.item_duplo_clique)
+        layout_toggle = QVBoxLayout()
+        layout_toggle.addStretch()               # empurra para baixo
+        layout_toggle.addWidget(self.toggle_btn) # botão no meio
+        layout_toggle.addStretch()   
+
+
+        layout_principal.addLayout(self.layout_imagem_botoes, 70)
+        layout_principal.addLayout(layout_toggle)  # botão entre a imagem e a área de setup
+        layout_principal.addWidget(self.layout_lista_widget, 30)
+        
+
 
         central = QWidget()
         central.setLayout(layout_principal)
@@ -158,7 +193,66 @@ class Principal(QMainWindow):
         self.timer.timeout.connect(self.atualizar_frame)
         self.timer.start(30)
 
+        # larg_inspect = self.btn1.width()
+        # self.btn1.setFixedWidth(larg_inspect)
+        
+        # larg_img = self.label_imagem.width()
+        # self.label_imagem.setFixedWidth(larg_img)
+        
+    def toggle_Compare(self, nome, botao):
+        if nome in self.componentes:
+            novo_estado = not self.componentes[nome].get("Compare", False)
+            if novo_estado == True:
+                self.lista.append(nome)
+            else:
+                self.lista.remove(nome)
+            self.componentes[nome]["Compare"] = novo_estado
+            self.atualizar_cor_botao(botao, novo_estado)
+            self.salvar_componentes()
+            print(self.lista)
+            # self.carregar_dados_json()
 
+    def editar_nome_componente(self, nome_antigo):
+        if nome_antigo not in self.componentes:
+            return
+
+        novo_nome, ok = QInputDialog.getText(self, "Editar Nome do Componente", "Nome do Componente:", text=nome_antigo)
+
+        if ok and novo_nome and novo_nome != nome_antigo:
+            if novo_nome in self.componentes:
+                QMessageBox.warning(self, "Erro", f"O nome '{novo_nome}' já existe.")
+                return
+            self.componentes[novo_nome] = self.componentes.pop(nome_antigo)
+
+        # Atualiza o nome também em componentes_esperados, se necessário
+        for nome, info in list(componentes_esperados.items()):
+            if nome == nome_antigo:
+                componentes_esperados[novo_nome] = componentes_esperados.pop(nome_antigo)
+                info = componentes_esperados[novo_nome]
+
+        # Pergunta e salva nova área
+        if novo_nome in componentes_esperados:
+            area = componentes_esperados[novo_nome].get("area", 100)
+            nova_area, ok = QInputDialog.getText(self, "Editar Area de Comparação", "Area (Numero Inteiro):", text=str(area))
+            if ok and nova_area.isdigit():
+                nova_area_int = int(nova_area)
+                componentes_esperados[novo_nome]["area"] = nova_area_int
+                if novo_nome in self.componentes:
+                    self.componentes[novo_nome]["area"] = nova_area_int
+
+        self.salvar_componentes()
+        self.carregar_dados_json()
+            
+    def definirmask(self):
+        global componentes_esperados
+        calibrar(model, imagem_entrada)
+        self.carregar_dados_json()
+        componentes_esperados = carregar_componentes()
+        for componente, info in componentes_esperados:
+            if info["Compare"] == True:
+                self.lista_test.append(componente)
+        QMessageBox.information(self, "Done", f"Nova Mascara de teste definida")
+        
     def mover_componentes_direcao(self):
         direcao = self.combo_direcao.currentText()
         deslocamento =5
@@ -182,58 +276,117 @@ class Principal(QMainWindow):
         self.salvar_componentes()
         # self.exibir_todos_componentes()
 
-    def carregar_dados_json(self):
-        self.lista.clear()
-        try:
-            with open(self.caminho_json, 'r') as f:
-                self.componentes = json.load(f)
 
-            for nome, info in self.componentes.items():
-                classe = info.get("classe", "")
-                pos = info.get("posicoes", [[]])[0]
-                item = QListWidgetItem(f"{nome} - Classe: {classe} \n x: {pos[0]}, y: {pos[1]} \n")
-                item.setData(Qt.UserRole, nome)
-                self.lista.addItem(item)
-        except Exception as e:
-            self.lista.addItem(f"Erro ao carregar JSON: {str(e)}")
-
-
-    def item_duplo_clique(self, item):
-        chave_antiga = item.data(Qt.UserRole)
-        info = self.componentes.get(chave_antiga, {})
-        if not info:
-            return
-
-        novo_nome, ok0 = QInputDialog.getText(self, "Editar Nome do Componente", "Nome do Componente:", text=chave_antiga)
-        if ok0 and novo_nome and novo_nome != chave_antiga:
-            if novo_nome in self.componentes:
-                QMessageBox.warning(self, "Erro", f"O nome '{novo_nome}' já existe.")
-                return
-            self.componentes[novo_nome] = self.componentes.pop(chave_antiga)
-            chave_antiga = novo_nome  # Atualiza para editar os demais campos
-            info = self.componentes[novo_nome]
-
-        self.salvar_componentes()
-        self.carregar_dados_json()
-
-
-    def item_clique(self, item):
-        chave_antiga = item.data(Qt.UserRole)
-        info = self.componentes.get(chave_antiga, {})
-        if not info:
-            return
-        pos = info.get("posicoes", [[0, 0]])[0]
-        tam = info.get("tamanho", [100, 100])
-        # self.desenhar_retangulo(pos, tam)
+    def toggle_setup_area(self):
+        if self.layout_lista_widget.isVisible():
+            self.label_imagem.setMaximumWidth(10000)
             
-    def definirmask(self):
-        global componentes_esperados
-        calibrar(model, imagem_entrada)
-        self.carregar_dados_json()
-        componentes_esperados = carregar_componentes()
-        QMessageBox.information(self, "Done", f"Nova Mascara de teste definida")
-        
+            self.layout_lista_widget.hide()
+            self.toggle_btn.setText("<")  # mostrar botão para expandir
+        else:
+            self.label_imagem.setMaximumWidth(int(self.larg_img))
+            self.layout_lista_widget.show()
+            self.toggle_btn.setText(">")  # mostrar botão para esconder
 
+    def carregar_dados_json(self):
+
+        self.lista.clear()
+        if not os.path.exists(self.caminho_json):
+            return
+
+        with open(self.caminho_json, 'r') as f:
+            self.componentes = json.load(f)
+
+        while self.lista_layout.count():
+            item = self.lista_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+
+        for nome, dados in self.componentes.items():
+            if "Compare" not in dados:
+                dados["Compare"] = False  # Adiciona Compare se não existir
+
+            if "area" not in dados:
+                dados["area"] = 100  # Adiciona Compare se não existir
+
+            if dados["Compare"] == True:
+                self.lista.append(nome)
+
+            
+
+            item_frame = ItemFrame(nome, self.selecionar_item)
+            item_layout = QHBoxLayout(item_frame)
+
+            nome_label = QLabel(nome)
+            nome_label.setFixedWidth(160)
+
+            btn_short = QPushButton("Comparar")
+            btn_short.setCheckable(True)
+            btn_short.setChecked(dados["Compare"])
+            btn_short.setObjectName(nome)  # Atribui o nome do componente ao botão
+            self.atualizar_cor_botao(btn_short, dados["Compare"])
+            btn_short.clicked.connect(lambda _, n=nome, b=btn_short: self.toggle_Compare(n, b))
+
+            btn_edit = QPushButton("Editar")
+            btn_edit.clicked.connect(lambda _, n=nome: self.editar_nome_componente(n))
+
+            btn_excluir = QPushButton("Excluir")
+            btn_excluir.clicked.connect(lambda _, n=nome: self.excluir_componente(n))
+            
+            item_layout.addWidget(nome_label)
+            item_layout.addWidget(btn_short)
+            item_layout.addWidget(btn_edit)
+            item_layout.addWidget(btn_excluir)
+
+            self.lista_layout.addWidget(item_frame)
+        print(self.lista)
+        self.salvar_componentes()
+
+        
+    def selecionar_item(self, nome, frame):
+        # Remove destaque do item anterior, se houver
+        if self.item_selecionado:
+            self.item_selecionado.setStyleSheet("")
+            for btn in self.item_selecionado.findChildren(QPushButton):
+                nome_btn = btn.objectName()
+                if nome_btn and nome_btn in self.componentes:
+                    if self.componentes[nome_btn].get("Compare", False):
+                        # Botão 'Comparar' ativo fica verde, com texto preto e bold
+                        btn.setStyleSheet("background-color: lightgreen; color: black; font-weight: bold;")
+                    else:
+                        # Outros botões ficam branco e font normal
+                        btn.setStyleSheet("color: white; font-weight: normal; background-color: none;")
+                else:
+                    btn.setStyleSheet("color: white; font-weight: normal; background-color: none;")
+            for label in self.item_selecionado.findChildren(QLabel):
+                # Label volta para fonte normal e cor branca
+                label.setStyleSheet("color: white; font-weight: normal;")
+
+        # Atualiza o item selecionado
+        self.item_selecionado = frame
+        frame.setStyleSheet("background-color: lightblue;")
+
+        # Ajusta os botões do item selecionado
+        for btn in frame.findChildren(QPushButton):
+            if btn.objectName() == nome and btn.isChecked():
+                btn.setStyleSheet("background-color: lightgreen; color: black; font-weight: bold;")
+            else:
+                btn.setStyleSheet("font-weight: bold; background-color: none;")
+        
+        # Ajusta os labels do item selecionado para bold e preto
+        for label in frame.findChildren(QLabel):
+            label.setStyleSheet("color: black; font-weight: bold;")
+
+        print(f"Item selecionado: {nome}")
+
+
+    def limpar_layout(layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
     def atualizar_frame(self):
         global imagem_entrada
         global imagem_atual
@@ -272,7 +425,30 @@ class Principal(QMainWindow):
             
     def recarregarimagem(self):
         self.exibir_macara = False
-            
+  
+    def excluir_componente(self, nome):
+        global componentes_esperados
+        if nome in self.componentes:
+            resposta = QMessageBox.question(
+                self,
+                "Confirmar Exclusão",
+                f"Tem certeza que deseja excluir o componente '{nome}'?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+
+            if resposta == QMessageBox.Yes:
+                del self.componentes[nome]
+                self.salvar_componentes()
+                self.carregar_dados_json()
+                componentes_esperados = carregar_componentes()
+
+
+    def atualizar_cor_botao(self, botao, ativado):
+        if ativado:
+            botao.setStyleSheet("background-color: lightgreen; font-weight: bold; color:black")
+        else:
+            botao.setStyleSheet("")  # Volta ao estilo padrão
+
     def desenhar_retangulo(self, centro, tamanho):
         global imagem_atual
         x, y = centro
@@ -308,12 +484,17 @@ class Principal(QMainWindow):
         event.accept()
 
     def desenhar_resultado_ia_em_tempo_real(self, img):
+        janelas_detectadas_atuais = set()
+
+        if self.larg_img == None:
+            self.larg_img = self.label_imagem.width()
+
         global serial, componentes_esperados
         imagem_sem_anotacoes = img.copy()
         detectou = False
         contagem_classes = defaultdict(int)
 
-        results = model.predict(img, conf=0.6)[0]
+        results = model.predict(img, conf=0.65)[0]
         boxes = results.boxes.xyxy
         centros_detectados = [centro_box(box) for box in boxes]
 
@@ -344,14 +525,17 @@ class Principal(QMainWindow):
                 cv2.imwrite("serial.png", img[y1:y2, x1:x2])
                 recorte = imagem_sem_anotacoes[y1:y2, x1:x2]
                 if self.labelserial.text() == "Awaiting...":
+                    self.lista_passed.clear()
                     serial = ler_serial(recorte)
                     print(f"Serial lido: {serial}")
                     self.labelserial.setText(f"Serial: {serial}")
                 elif self.labelserial.text() == f"":
+                    self.lista_passed.clear()
                     serial = ler_serial(recorte)
                     print(f"Serial lido: {serial}")
                     self.labelserial.setText(f"Serial: {serial}")
                 elif self.labelserial.text() == f"Serial: ":
+                    self.lista_passed.clear()
                     serial = ler_serial(recorte)
                     print(f"Serial lido: {serial}")
                     self.labelserial.setText(f"Serial: {serial}")
@@ -383,6 +567,7 @@ class Principal(QMainWindow):
                 cv2.putText(img, texto_faltando, (falt_x1, falt_y1),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
                 faltando.append(nome)
+                # print(f"faltando  {nome}")
             else:
                 texto_contagem = f"{nome} ({classe}): {contagem_classes.get(classe, 0)} un."
                 cv2.putText(img, texto_contagem, (10, y_offset),
@@ -393,144 +578,248 @@ class Principal(QMainWindow):
             cv2.putText(img, "Nenhum objeto detectado", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
             self.labelserial.setText("Awaiting...")
+            self.lista_passed.clear()
 
         # Se todos os componentes esperados foram detectados, faz o segundo teste
+        print(len(faltando))
+
         if len(faltando) == 0:
+            janelas_detectadas_atuais = set()  # <- CRUCIAL: fora do loop
+
             for box, cls, conf in zip(results.boxes.xyxy, results.boxes.cls, results.boxes.conf):
                 class_id = int(cls)
                 label = model.names[class_id]
-                # Procura pelo nome do componente correspondente
+
                 for nome, info in componentes_esperados.items():
-                    if info["classe"] == label and nome in lista:
+                    if nome in self.lista_passed:
+                        continue
+                    if info["classe"] == label and nome in self.lista:
                         pos = info["posicoes"][0]
                         if distancia(pos, centro_box(box)) < 50:
-                            # Crop em tempo real
                             x1, y1, x2, y2 = map(int, box)
                             crop_realtime = imagem_sem_anotacoes[y1:y2, x1:x2]
-                            # Caminho do crop salvo
-                            crop_path = os.path.join("componentes", nome, f"{nome}.jpg")
+                            crop_path = os.path.join("componentes", nome, f"{nome}.bmp")
+
                             if os.path.exists(crop_path):
                                 crop_salvo = cv2.imread(crop_path)
-                                # Redimensiona para o mesmo tamanho
                                 if crop_salvo is not None and crop_realtime.shape[:2] == crop_salvo.shape[:2]:
                                     crop_salvo_resized = crop_salvo
                                     crop_realtime_resized = crop_realtime
-                                    # salvar crop salvo redimensionado
                                 else:
                                     crop_salvo_resized = cv2.resize(crop_salvo, (crop_realtime.shape[1], crop_realtime.shape[0]))
                                     crop_realtime_resized = crop_realtime
-                                # Converte para cinza
+
                                 crop_salvo_gray = cv2.cvtColor(crop_salvo_resized, cv2.COLOR_BGR2GRAY)
                                 crop_realtime_gray = cv2.cvtColor(crop_realtime_resized, cv2.COLOR_BGR2GRAY)
-                                # salvar iamgem cropada em tempo real
-                                cv2.imwrite(fr"debug\{nome}_crop_default.jpg", crop_salvo_gray)
-                                cv2.imwrite(fr"debug\{nome}_crop_realtime.jpg", crop_realtime_gray)
 
-                                # score, _ = ssim(crop_salvo_gray, crop_realtime_gray, full=True)
+                                cv2.imwrite(fr"debug\{nome}_crop_default.bmp", crop_salvo_gray)
+                                cv2.imwrite(fr"debug\{nome}_crop_realtime.bmp", crop_realtime_gray)
+                                path_boas = crop_path
                                 score, _ = ssim(crop_salvo_resized, crop_realtime_resized, channel_axis=-1, full=True)
-                                comparacao = self.comparar(crop_salvo_resized,crop_realtime_resized, borda=0.1, area_min=100)
+                                comparacao = self.comparar(crop_salvo_resized, crop_realtime_resized, 0.1, info["area"], path_boas=os.path.join("componentes", nome), nome=nome)
                                 texto_ssim = f"SSIM {nome}: {score:.2f}"
 
-                                logs_dir = "Logs"
-                                os.makedirs(logs_dir, exist_ok=True)
-                                log_file = os.path.join(logs_dir, f"{nome}.txt")
-                                    
+                                log_file = os.path.join("Logs", f"{nome}.txt")
+                                os.makedirs("Logs", exist_ok=True)
                                 with open(log_file, "w", encoding="utf-8") as f:
                                     f.write(f"{score:.2f}")
+                            else:
+                                print("pasta crop nao encontrada")
+                                comparacao = None
 
-                            if comparacao != None:
+                            janela_nome = f"Crop em tempo real - {nome}"
+
+                            # Se houver falha na comparação, MANTÉM a janela aberta
+                            if comparacao is not None:
+                                janelas_detectadas_atuais.add(janela_nome)
+                                print("encontrado")
                                 cv2.putText(img, texto_ssim, (x1, y1 + 25),
                                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
 
-                                janela_nome = f"Crop em tempo real - {nome}"
                                 try:
                                     if janela_nome not in self.janelas_crops_abertas:
                                         cv2.namedWindow(janela_nome, cv2.WINDOW_NORMAL)
                                         self.janelas_crops_abertas.add(janela_nome)
 
-                                    cv2.imshow(janela_nome, comparacao)
-                                    cv2.resizeWindow(janela_nome, 600, 400)
+                                    # Adiciona área abaixo da imagem
+                                    h, w = comparacao.shape[:2]
+                                    area_extra = 50
+                                    comparacao_com_botao = np.zeros((h + area_extra, w, 3), dtype=np.uint8)
+                                    comparacao_com_botao[:h, :, :] = comparacao
+
+                                    # Centraliza o texto "PASS"
+                                    text = "CLICK TO ACCEPT"
+                                    font = cv2.FONT_HERSHEY_SIMPLEX
+                                    font_scale = 0.7
+                                    thickness = 1
+                                    (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
+
+                                    text_x = (w - text_width) // 2
+                                    text_y = h + (area_extra + text_height) // 2
+
+                                    cv2.putText(comparacao_com_botao, text, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+                                    
+                                    # Define callback de clique
+                                    cv2.setMouseCallback(janela_nome, self.on_mouse_click, param=(nome, crop_realtime_resized, h))
+
+
+                                    cv2.imshow(janela_nome, comparacao_com_botao)
+                                    cv2.resizeWindow(janela_nome, 600, 450)
 
                                     if cv2.getWindowProperty(janela_nome, cv2.WND_PROP_VISIBLE) < 1:
                                         self.janelas_crops_abertas.discard(janela_nome)
                                 except cv2.error as e:
                                     print(f"Erro ao abrir janela para {nome}: {e}")
                                     self.janelas_crops_abertas.discard(janela_nome)
-                                else:
-                                    cv2.putText(img, texto_ssim, (x1, y2 + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                                                
-
                             else:
-                                cv2.putText(img, f"Crop salvo não encontrado para {nome}", (x1, y2 + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                                cv2.putText(img, texto_ssim, (x1, y2 + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
-    
-    def comparar(self, img_boa,img_comparar,borda,area_min):
+            print(self.lista_passed)
+            # FORA do for principal: fecha janelas cujas falhas desapareceram
+            janelas_a_fechar = self.janelas_crops_abertas - janelas_detectadas_atuais
+            for janela in janelas_a_fechar:
+                try:
+                    cv2.destroyWindow(janela)
+                except cv2.error as e:
+                    print(f"Erro ao fechar janela {janela}: {e}")
+                self.janelas_crops_abertas.discard(janela)
 
-        if img_boa is None or img_comparar is None:
-            print("Erro ao carregar imagens.")
+
+
+            print(len(self.lista_test))
+            print(len(self.lista_passed))
+            if len(self.lista_test) == len(self.lista_passed):
+                self.labelserial = f"{self.labelserial.text} = PASS"
+
+                                    
+    def comparar(self, img_boa, img_comparar, borda, area_min, path_boas, nome):
+        if img_comparar is None:
+            print("Imagem de comparação inválida.")
             return
 
-        # Redimensiona para o mesmo tamanho
-        if img_boa.shape != img_comparar.shape:
-            img_comparar = cv2.resize(img_comparar, (img_boa.shape[1], img_boa.shape[0]))
+        try:
+            lista_boas = [os.path.join(path_boas, f) for f in os.listdir(path_boas)
+                        if f.lower().endswith((".bmp", ".jpg", ".png"))]
+        except Exception as e:
+            print(f"Erro ao ler imagens do diretório '{path_boas}': {e}")
+            return
 
-        h, w = img_boa.shape[:2]
+        for path_img_boa in lista_boas:
+            img_boa = cv2.imread(path_img_boa)
+            if img_boa is None:
+                print(f"Falha ao carregar imagem: {path_img_boa}")
+                continue
 
-        # Define região central (desconsidera bordas)
-        x_start = int(w * borda)
-        y_start = int(h * borda)
-        x_end = int(w * (1 - borda))
-        y_end = int(h * (1 - borda))
+            # Redimensiona
+            if img_boa.shape != img_comparar.shape:
+                img_comparar_resized = cv2.resize(img_comparar, (img_boa.shape[1], img_boa.shape[0]))
+            else:
+                img_comparar_resized = img_comparar.copy()
 
-        # Recorte da área central no CANAL VERDE
-        canal_boa = img_boa[y_start:y_end, x_start:x_end, 1]
-        canal_ruim = img_comparar[y_start:y_end, x_start:x_end, 1]
+            h, w = img_boa.shape[:2]
+            x_start = int(w * borda)
+            y_start = int(h * borda)
+            x_end = int(w * (1 - borda))
+            y_end = int(h * (1 - borda))
 
-        # Suavização com filtro gaussiano
-        canal_boa = cv2.GaussianBlur(canal_boa, (3, 3), 0)
-        canal_ruim = cv2.GaussianBlur(canal_ruim, (3, 3), 0)
+            canal_boa = img_boa[y_start:y_end, x_start:x_end, 1]
+            canal_ruim = img_comparar_resized[y_start:y_end, x_start:x_end, 1]
 
-        # Diferença absoluta
-        diff = cv2.absdiff(canal_boa, canal_ruim)
+            canal_boa = cv2.GaussianBlur(canal_boa, (3, 3), 0)
+            canal_ruim = cv2.GaussianBlur(canal_ruim, (3, 3), 0)
 
-        media = np.mean(diff)
-        _, diff_thresh = cv2.threshold(diff, media + 10, 255, cv2.THRESH_BINARY)
+            diff = cv2.absdiff(canal_boa, canal_ruim)
+            media = np.mean(diff)
+            _, diff_thresh = cv2.threshold(diff, media + 10, 255, cv2.THRESH_BINARY)
 
-        # Remoção de ruídos pequenos
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        diff_thresh = cv2.morphologyEx(diff_thresh, cv2.MORPH_OPEN, kernel, iterations=2)
-        diff_thresh = cv2.dilate(diff_thresh, kernel, iterations=1)
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            diff_thresh = cv2.morphologyEx(diff_thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+            diff_thresh = cv2.dilate(diff_thresh, kernel, iterations=1)
 
-        # Contornos
-        contornos, _ = cv2.findContours(diff_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contornos, _ = cv2.findContours(diff_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        img_resultado = img_comparar.copy()
-        diferencas = 0
+            diferencas = 0
+            for cnt in contornos:
+                area = cv2.contourArea(cnt)
+                if area >= area_min:
+                    x, y, w_box, h_box = cv2.boundingRect(cnt)
+                    aspect_ratio = w_box / float(h_box) if h_box != 0 else 0
+                    hull = cv2.convexHull(cnt)
+                    solidity = area / cv2.contourArea(hull) if cv2.contourArea(hull) > 0 else 0
 
+                    if 0.2 < aspect_ratio < 5.0 and solidity > 0.3:
+                        diferencas += 1
+                        break  # já podemos interromper, essa imagem tem falha
+
+            # Se essa imagem "boa" não encontrou diferença, a comparação é compatível
+            if diferencas == 0:
+                print(f"Imagem compatível encontrada: {os.path.basename(path_img_boa)}")
+                self.lista_passed.append(nome)
+
+                return None  # Não é falha, uma imagem boa bateu
+
+        # Se chegou aqui, todas tinham diferenças
+        print("Todas as imagens boas apresentaram diferenças.")
+        img_resultado = img_comparar_resized.copy()
         for cnt in contornos:
             area = cv2.contourArea(cnt)
             if area >= area_min:
-                # Critérios extras: aspecto e solidez
                 x, y, w_box, h_box = cv2.boundingRect(cnt)
                 aspect_ratio = w_box / float(h_box) if h_box != 0 else 0
                 hull = cv2.convexHull(cnt)
                 solidity = area / cv2.contourArea(hull) if cv2.contourArea(hull) > 0 else 0
 
                 if 0.2 < aspect_ratio < 5.0 and solidity > 0.3:
-                    cnt += np.array([[[x_start, y_start]]])  # volta para coordenada original
+                    cnt += np.array([[[x_start, y_start]]])  # volta para coord original
                     cv2.drawContours(img_resultado, [cnt], -1, (0, 0, 255), 2)
-                    diferencas += 1
 
-        print(f"diferenca(s) detectada(s): {diferencas}")
-        if diferencas > 0:
-            empilhada = np.hstack([img_boa, img_resultado])
-            return empilhada
+        empilhada = np.hstack([img_boa, img_resultado])
+        return empilhada
 
-        else:
-            return None
+            
+    def salvar_crop_como_valido(self, nome, imagem):
+        pasta = os.path.join("componentes", nome)
+        os.makedirs(pasta, exist_ok=True)
+        i = 1
+        while True:
+            caminho = os.path.join(pasta, f"{nome}_{i}.bmp")
+            if not os.path.exists(caminho):
+                cv2.imwrite(caminho, imagem)
+                print(f"Imagem marcada como válida e salva em: {caminho}")
+                break
+            i += 1
+
+    def on_mouse_click(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            nome, crop_realtime_resized, altura = param
+
+            if y >= altura:  # Qualquer clique abaixo da imagem
+                print(f"[PASS] Clique detectado abaixo da imagem para {nome}")
+                self.salvar_crop_como_valido(nome, crop_realtime_resized)
+
+                
+def aplicar_tema_escuro(app):
+    dark_palette = QPalette()
+
+    dark_palette.setColor(QPalette.Window, QColor(45, 45, 45))
+    dark_palette.setColor(QPalette.WindowText, Qt.white)
+    dark_palette.setColor(QPalette.Base, QColor(30, 30, 30))
+    dark_palette.setColor(QPalette.AlternateBase, QColor(45, 45, 45))
+    dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+    dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+    dark_palette.setColor(QPalette.Text, Qt.white)
+    dark_palette.setColor(QPalette.Button, QColor(45, 45, 45))
+    dark_palette.setColor(QPalette.ButtonText, Qt.white)
+    dark_palette.setColor(QPalette.BrightText, Qt.red)
+    dark_palette.setColor(QPalette.Highlight, QColor(100, 100, 255))
+    dark_palette.setColor(QPalette.HighlightedText, Qt.black)
+
+    app.setPalette(dark_palette)
+    app.setStyle("Fusion")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     janela = Principal()
     janela.showMaximized()
+    aplicar_tema_escuro(app)
     sys.exit(app.exec_())

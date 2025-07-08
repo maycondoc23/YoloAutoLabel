@@ -111,7 +111,7 @@ def ler_serial(image_crop):
     cv2.imwrite("rec_bin.png", rec_bin)
     # cv2.imshow("image_crop.png", image_crop)
     cv2.imwrite("zoom.png", rec_zoom)
-    decoded_objects = decode(rec_bin, timeout=500, max_count=4)
+    decoded_objects = decode(rec_zoom, timeout=500, max_count=4)
     
     for obj in decoded_objects:
         valor = obj.data.decode("utf-8")

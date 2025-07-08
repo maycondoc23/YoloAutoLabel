@@ -61,7 +61,7 @@ def salvar_componentes(componentes_dict):
 #     return componentes
 
 
-def calibrar(model, imagem_path, conf=0.6):
+def calibrar(model, imagem_path, conf=0.5):
     results = model.predict(imagem_path, conf=conf)[0]
 
     agrupados = defaultdict(list)
@@ -91,8 +91,7 @@ def calibrar(model, imagem_path, conf=0.6):
 
     componentes = {}
     for classe, posicoes in agrupados.items():
-        if classe == "LED":
-            continue
+
         for i, item in enumerate(posicoes, 1):
             nome = f"{classe}{i}"
             componentes[nome] = {
@@ -109,7 +108,7 @@ def calibrar(model, imagem_path, conf=0.6):
             box = item["box"]
             x1, y1, x2, y2 = map(int, box)
             crop = img.crop((x1, y1, x2, y2))
-            crop_path = os.path.join(pasta, f"{nome}.jpg")
+            crop_path = os.path.join(pasta, f"{nome}.bmp")
             crop.save(crop_path)
             print(f"Imagem cropada salva em {crop_path}")
 
